@@ -1,0 +1,231 @@
+{% load static %}
+
+<html>  
+<head>  
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+	<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.js"></script> 
+
+	<script src='{% static 'mypats/js/jquery.raty.min.js' %}'></script>
+
+	<style type="text/css">
+		body, html {width: 100%;height: 100%;margin:0;font-family:"微软雅黑";}
+		#container{width:100%;height:100%;}
+		p{margin-left:5px; font-size:14px;}
+	</style>
+<title>显示患者位置</title>  
+<script type="text/javascript" src="https://api.map.baidu.com/api?v=2.0&ak=&s=1"></script>   
+</head>  
+<body>  
+    <div style="position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    background: white; border:1px solid gray" id="container"></div>
+
+    <a style="position: fixed;
+    top: 0px;
+    right: 70px;
+    width: 35px;
+    height: 20px;
+    margin: 0px 0 0 -100px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="map" href="{% url 'mypats:index'%}">地图</a>
+
+    <a style="position: fixed;
+    top: 0px;
+    right: 35px;
+    width: 35px;
+    height: 20px;
+    margin: 0px 0 0 -50px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="stats" href="{% url 'mypats:stats'%}">统计</a>
+
+    <a style="position: fixed;
+    top: 0px;
+    right: 0px;
+    width: 35px;
+    height: 20px;
+    margin: 0px 0 0 0;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="admin" href="admin">管理</a>
+
+    <div style="position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 65px;
+    height: 20px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="label">初诊日期</div>
+
+    <a style="position: fixed;
+    top: 20px;
+    left: 0px;
+    width: 65px;
+    height: 20px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="label" href="1">今天</a>
+
+    <a style="position: fixed;
+    top: 40px;
+    left: 0px;
+    width: 65px;
+    height: 20px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="label" href="7">过去7天</a>
+
+    <a style="position: fixed;
+    top: 60px;
+    left: 0px;
+    width: 65px;
+    height: 20px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="label" href="31">过去一月</a>
+
+    <a style="position: fixed;
+    top: 80px;
+    left: 0px;
+    width: 65px;
+    height: 20px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="label" href="365">过去一年</a>
+
+    <a style="position: fixed;
+    top: 100px;
+    left: 0px;
+    width: 65px;
+    height: 20px;
+    z-index: 20000;
+    background: white; border:1px solid gray" id="label" href="{% url 'mypats:index'%}">任意一天</a>
+
+    <div style="position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 25px;
+    height: 54px;
+    margin: -54px 0 0 -12px; 
+    z-index: 20000;
+    background: url({% static 'mypats/img/map_pos_sel.png' %}) no-repeat;" id="map_pos_sel"/>
+
+    <div style="position: fixed;
+    top: 100%;
+    left: 5px;
+    width: 50px;
+    height: 50px;
+    margin: -120px 0 0 0px; 
+    z-index: 20000;
+    background: url({% static 'mypats/img/map_center.png' %}) no-repeat;" id="map_center"/>
+
+    <div style="position: fixed;
+    top: 100%;
+    left: 5px;
+    width: 100%;
+    height: 25px;
+border-radius: 5px;
+    margin: -55px 5px 0 0px; 
+    z-index: 20000;
+    background: white;"><img style="height:20px;width:20px;float:left" src="{% static 'mypats/img/green_point.png' %}"/><span style="margin: 0 0 0 5px" id="map_addr_cur">我的位置</span></div>
+
+    <div style="position: fixed;
+    top: 100%;
+    left: 5px;
+    width: 100%;
+    height: 25px;
+border-radius: 5px;
+    margin: -30px 5px 0 0px; 
+    z-index: 20000;
+    background: white;"><img style="height:20px;width:20px;float:left" src="{% static 'mypats/img/red_point.png' %}"/><span style="margin: 0 0 0 5px" id="map_addr_sel">患者的位置</span></div>
+
+</body>  
+</html>  
+<script type="text/javascript">
+
+    var mp = new BMap.Map("container");
+
+    var curPoint = new BMap.Point(108.962464,34.280036);
+  
+    mp.centerAndZoom(curPoint, 15);  
+    mp.enableScrollWheelZoom();
+    mp.enableContinuousZoom();
+
+    var geoc = new BMap.Geocoder();  
+
+    mp.addEventListener("moving",function(){
+        geoc.getLocation(mp.getCenter(), setMapAddrCur);
+    });
+
+	var geolocation = new BMap.Geolocation();
+	geolocation.getCurrentPosition(function(r){
+		if(this.getStatus() == BMAP_STATUS_SUCCESS){
+			mp.panTo(r.point);
+			curPoint = r.point;
+
+            geoc.getLocation(curPoint, setMapAddrCur);  		
+
+            var curIcon;
+            var cur_marker;
+
+            curIcon = new BMap.Icon("{% static 'mypats/img/map_pos_cur.png' %}", new BMap.Size(30,30));
+            cur_marker = new BMap.Marker(r.point,{icon:curIcon});  // 创建标注
+            mp.addOverlay(cur_marker);              // 将标注添加到地图中
+		}
+		else {
+			//alert('failed'+this.getStatus());
+		}        
+	},{enableHighAccuracy: true})  
+
+    function getDataAjax(handleData) {
+        $.ajax({
+            url:"api/" + "{{ duration }}",  
+            success:function(data) {
+                handleData(data); 
+            }
+        });
+    }
+
+    var patients = [];
+    //var markers = [];
+
+    getDataAjax(function(data) {
+        if(data != null) {
+            patients = JSON.parse(data);
+            for (var i=0;i<patients.length;i++) {
+                //markers[i] = {};
+                //markers[i].pk = patients[i].pk;
+                var addr = patients[i].fields.address;
+                geoc.getPoint(addr, function(pt) {
+                    if(pt != null) {
+                        //markers[i].pt = pt;
+                        var marker = new BMap.Marker(pt);  // 创建标注
+                        marker.addEventListener("click",function(e){
+                            geoc.getLocation(pt, setMapAddrSel);
+                        })
+                    
+                        //markers[i].marker = marker;
+                        mp.addOverlay(marker);
+                    } else {
+                        //alert('null');
+                    }
+                }, '');
+            }
+        }
+    })
+
+	function setMapAddrCur(rs) {  		
+		$('#map_addr_cur').text(rs.address);
+	}
+
+	function setMapAddrSel(rs) {  		
+		$('#map_addr_sel').text(rs.address);
+	}
+
+
+
+    $('#map_center').on("click", function (){
+        mp.centerAndZoom(curPoint, 15);
+        geoc.getLocation(curPoint, setMapAddrCur);
+    });  
+</script>
